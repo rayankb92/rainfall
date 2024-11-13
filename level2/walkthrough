@@ -1,0 +1,52 @@
+## Walkthrough du level 2
+
+### Objectif
+
+Comme le level precedent l'objectif du level 2 est d'exploiter une vulnérabilité dans le programme afin d'obtenir un shell.
+
+## Code décomplié
+
+```c
+void    p(void)
+{
+    int     memory;
+    char    buffer[76];
+
+    fflush(stdout);
+
+    gets(buffer);
+
+    if (memory & 0xb0000000)
+    {
+        printf("(%p)\n", &memory);
+        exit(1);
+    }
+
+    puts(buffer);
+    strdup(buffer);
+}
+
+int     main(void)
+{
+    p();
+    return (0);
+}
+```
+- On voit que la fonction p est appeler et elle contient gets comme le niveau precedent on peut donc placer un shellcode en faisant un depassement de tampon, en faisant cela ca ne marche pas.
+
+- donc en desassemnlant p() on voit qu'il y a une verification sur l''instruction and $0xb0000000,%eax qui vérifie si l'adresse de retour pointe vers la pile:
+
+```bash
+mov    0x4(%ebp),%eax        ; Récupère l'adresse de retour stockée dans la pile
+mov    %eax,-0xc(%ebp)       ; La sauvegarde dans une variable locale
+mov    -0xc(%ebp),%eax       ; La recharge dans eax
+and    $0xb0000000,%eax      ; Masque pour ne garder que les bits de poids fort
+cmp    $0xb0000000,%eax      ; Compare avec 0xb0000000
+jne    0x8048527             ; Si différent, continue normalement
+```
+
+
+- Sur Linux, la plage 0xb0000000 à 0xbfffffff correspond 
+
+#### Heap spraying
+On peut donc passer par strdup() qui alloue sur la heap pour placer notre shellcode et faire pointer l'addresse de retour vers cet endroit de la heap

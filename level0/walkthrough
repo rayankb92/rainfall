@@ -1,29 +1,31 @@
-gdb ./level0
+### Explication du Niveau 0
 
-disas main
+En décompilant le code, on voit que le programme effectue un `atoi` sur `argv[1]` et vérifie si sa valeur est `423`. Si c'est le cas, il exécute `/bin/sh` avec les droits de l'utilisateur `level1`, ce qui nous permet d'afficher le flag.
 
-0x08048ed4 <+20>:	call   0x8049710 <atoi>
-0x08048ed9 <+25>:	cmp    $0x1a7,%eax
 
-on voit que le programme fait un atoi sur le parametre
-et qu'il compare 0x1ae7 (432) a ce parametre on peut
-se dire que le parametre attendu est 432
+#### Code decompilé
 
-donc on lance le script avec 432
-./level0 432
-$
-on arrive dans un shell, si on va dans /home/user/level1
-on voit qu'on a les droits de lecture su .pass
+```c
+int main(int argc, char *argv[]) {
+    int input_value = atoi(argv[2]);
+    if (input_value == 423) {
+        char *shell_path = strdup("/bin/sh");
+        uid_t effective_uid = geteuid();
+        gid_t effective_gid = getegid();
+        setresgid(effective_gid, effective_gid, effective_gid);
+        setresuid(effective_uid, effective_uid, effective_uid);
+        execv(shell_path, &shell_path);
+    } else {
+        fwrite("No !\n", 1, 5, stderr);
+    }
+    return 0;
+}
+```
 
-$ cd /home/user/level1
-$ ls -la
-total 17
-dr-xr-x---+ 1 level1 level1   80 Mar  6  2016 .
-dr-x--x--x  1 root   root    340 Sep 23  2015 ..
--rw-r--r--  1 level1 level1  220 Apr  3  2012 .bash_logout
--rw-r--r--  1 level1 level1 3530 Sep 23  2015 .bashrc
--rwsr-s---+ 1 level2 users  5138 Mar  6  2016 level1
--rw-r--r--+ 1 level1 level1   65 Sep 23  2015 .pass
--rw-r--r--  1 level1 level1  675 Apr  3  2012 .profile
-cat .pass
+#### procédé
+```
+$ ./level0 423 # ceci nous donne acces a un shell
+$ cat /home/user/level1 
 1fe8a524fa4bec01ca4ea2a869af2a02260d4a7d5fe7e7c24d8617e6dca12d3a
+```
+
