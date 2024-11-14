@@ -46,7 +46,11 @@ jne    0x8048527             ; Si différent, continue normalement
 ```
 
 
-- Sur Linux, la plage 0xb0000000 à 0xbfffffff correspond 
+- Sur Linux, la plage 0xb0000000 à 0xbfffffff correspond typiquement à la zone de la stack
 
+## Solution
 #### Heap spraying
-On peut donc passer par strdup() qui alloue sur la heap pour placer notre shellcode et faire pointer l'addresse de retour vers cet endroit de la heap
+* Mettre notre shellcode dans le buffer
+* Laisser strdup() le copier dans la heap
+* Faire pointer l'adresse de retour vers cette copie dans le heap
+
