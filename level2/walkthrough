@@ -61,7 +61,7 @@ jne    0x8048527             ; Si différent, continue normalement
 - 2: on rempli le reste du buffer
 - 3: on depasse le buffer pour reecrire l'addresse de retour en mettant l'addresse de notre shellcode:
 
-il faut arriver a l'addresse de retour de la fonction pour ce faire oil faut depasser buffer[76] et int memory qui fait 4 octet
+il faut arriver a l'addresse de retour de la fonction pour ce faire il faut depasser buffer[76] et int memory qui fait 4 octet
 donc 80 octet
 
 Taille du shelllcode = 21 octet
