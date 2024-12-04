@@ -37,11 +37,8 @@ L'adresse de la variable m doit être trouvée afin de pouvoir manipuler sa vale
 Étapes pour trouver l'adresse de m :
 Utiliser gdb pour analyser la pile : J'ai exécuté le programme dans GDB pour analyser les arguments passés à printf et trouver l'adresse de m.
 ```bash
-gdb
-Copy code
-break v
-run
-info frame
+gdb ./level3
+print &m
 ```
 
 ### Exploiter le format string : J'ai utilisé la commande suivante pour afficher les valeurs dans la pile avec %x :
