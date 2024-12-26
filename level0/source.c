@@ -9,7 +9,7 @@ int main(int argc, char *argv[]) {
 
     // Vérifie si l'entrée est égale à 423
     if (input_value == 423) {
-        // Duplique la chaîne "/bin/sh"
+        // Duplique la chaîne "/bin/sih"
         char *shell_path = strdup("/bin/sh");
 
         // Obtient les UID et GID effectifs

